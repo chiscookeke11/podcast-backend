@@ -20,9 +20,6 @@
     <h1>Podcast Voice Studio</h1>
     <p class="muted">Create a two-host episode and play generated voice lines.</p>
 
-    <label>API Base URL</label>
-    <input id="api_base" value="http://127.0.0.1:8000" />
-
     <label>Episode title</label>
     <input id="title" value="Frontend Voice Test" />
 
@@ -90,13 +87,9 @@ function payload() {
   };
 }
 
-function apiBase() {
-  return $("api_base").value.replace(/\/$/, "");
-}
-
 async function pollEpisode(id) {
   for (let i = 0; i < 120; i++) {
-    const r = await fetch(`${apiBase()}/episodes/${id}`);
+    const r = await fetch(`/episodes/${id}`);
     const ep = await r.json();
     $("debug").textContent = JSON.stringify(ep, null, 2);
     $("status").textContent = `Status: ${ep.status}`;
@@ -120,7 +113,7 @@ $("go").addEventListener("click", async () => {
   try {
     $("status").textContent = "Submitting episode request...";
     $("players").innerHTML = "";
-    const res = await fetch(`${apiBase()}/episodes/generate`, {
+    const res = await fetch('/episodes/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload())
