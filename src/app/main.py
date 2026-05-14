@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 import structlog
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,6 +31,11 @@ app.add_middleware(
 
 
 app.include_router(episodes_router)
+
+
+@app.get("/")
+async def frontend():
+    return FileResponse("src/app/static/index.html")
 
 
 @app.get("/health")
