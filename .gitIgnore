@@ -1,0 +1,80 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# =========================
+# Environment variables
+# =========================
+.env
+
+# =========================
+# Testing
+# =========================
+.pytest_cache/
+.coverage
+htmlcov/
+
+# =========================
+# Type checking
+# =========================
+.mypy_cache/
+
+# =========================
+# Ruff / linting
+# =========================
+.ruff_cache/
+
+# =========================
+# IDEs
+# =========================
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# FastAPI / app-specific
+# =========================
+
+# Generated audio
+audio_cache/
+*.mp3
+*.wav
+
+# Logs
+logs/
+*.log
+
+# Temporary uploads
+uploads/
+
+# SQLite databases
+*.db
+*.sqlite3
+
+# =========================
+# Secrets
+# =========================
+secrets.json
+credentials.json
