@@ -7,7 +7,7 @@ class Settings(BaseSettings):
 
     # AI
     anthropic_api_key: str
-    anthropic_model: str = "claude-sonnet-4-20250514"
+    anthropic_model: str = "claude-3-5-haiku-20241022"
 
     # ElevenLabs
     elevenlabs_api_key: str
@@ -25,4 +25,4 @@ class Settings(BaseSettings):
         return self.app_env == "development"
 
 
-Settings = Settings()
+settings = Settings()
