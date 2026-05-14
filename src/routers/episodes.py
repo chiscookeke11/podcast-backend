@@ -18,6 +18,11 @@ router = APIRouter(prefix="/episodes", tags=["episodes"])
 _episodes: dict[str, Episode] = {}
 
 
+def _audio_public_url(episode_id: UUID, audio_ref: str) -> str:
+    name = Path(audio_ref).name
+    return f"/episodes/{episode_id}/audio/{name}"
+
+
 @router.post("/generate", response_model=Episode, status_code=202)
 async def generate_episode(
     request: EpisodeRequest,
@@ -63,6 +68,8 @@ async def get_episode(episode_id: UUID):
     ep = _episodes.get(str(episode_id))
     if not ep:
         raise HTTPException(status_code=404, detail="Episode not found")
+    if ep.audio_files:
+        ep.audio_files = [_audio_public_url(episode_id, a) for a in ep.audio_files]
     return ep
 
 
