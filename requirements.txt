@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+
+pydantic
+pydantic-settings
+
+structlog
+anthropic
+
+httpx
+python-dotenv
