@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
 
     # TTS
-    tts_provider: str = "openai"
+    tts_provider: str = "elevenlabs"
 
     # ElevenLabs
     elevenlabs_api_key: str | None = None
@@ -26,7 +26,6 @@ class Settings(BaseSettings):
     max_episode_turns: int = 12
     tts_concurrency: int = 3
     cors_origins: list[str] = ["http://localhost:5173"]
-
 
     @field_validator("tts_provider", mode="before")
     @classmethod
