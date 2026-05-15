@@ -185,7 +185,7 @@ async def synthesise_line(
             return SynthesisResult(
                 line_index=line.line_index,
                 speaker=line.speaker,
-                audio_path=str(output_path),
+                audio_path=filename,  # Store only filename, not full path
             )
 
         except httpx.HTTPStatusError as e:
