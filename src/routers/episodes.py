@@ -36,7 +36,7 @@ async def generate_episode(
     _episodes[str(episode.id)] = episode
 
     async def _run():
-        result = await run_episode_pipeline(request)
+        result = await run_episode_pipeline(request, episode_id=episode.id)
         # Merge result back — preserve the same ID
         result.id = episode.id
         _episodes[str(episode.id)] = result
