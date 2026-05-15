@@ -23,7 +23,10 @@ from services.tts_service import synthesise_transcript
 log = structlog.get_logger()
 
 
-async def run_episode_pipeline(request: EpisodeRequest) -> Episode:
+async def run_episode_pipeline(
+    request: EpisodeRequest,
+    episode_id: uuid.UUID | None = None,
+) -> Episode:
     """
     Full pipeline — runs synchronously through three stages:
 
@@ -34,7 +37,7 @@ async def run_episode_pipeline(request: EpisodeRequest) -> Episode:
     Returns a completed Episode with transcript and audio_files populated.
     On any failure, returns an Episode with status=FAILED and error set.
     """
-    episode_id = uuid.uuid4()
+    episode_id = episode_id or uuid.uuid4()
     episode = Episode(id=episode_id, title=request.episode_title)
 
     log.info(

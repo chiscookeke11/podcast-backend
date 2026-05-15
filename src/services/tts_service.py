@@ -159,8 +159,13 @@ async def synthesise_line(
     filename = f"{line.line_index:03d}_{line.speaker.lower()}.mp3"
     output_path = output_dir / filename
 
-    # Try ElevenLabs first if configured
-    if settings.tts_provider == "elevenlabs" and settings.elevenlabs_api_key:
+    # Provider selection: OpenAI-first unless explicitly configured for ElevenLabs
+    use_elevenlabs = (
+        settings.tts_provider.lower() == "elevenlabs" and settings.elevenlabs_api_key
+    )
+
+    # Try ElevenLabs first only when explicitly selected
+    if use_elevenlabs:
         try:
             voice_settings = _merge_tone(host, line.tone)
             audio_bytes = await _call_elevenlabs(
@@ -185,7 +190,7 @@ async def synthesise_line(
             return SynthesisResult(
                 line_index=line.line_index,
                 speaker=line.speaker,
-                audio_path=str(output_path),
+                audio_path=filename,  # Store only filename, not full path
             )
 
         except httpx.HTTPStatusError as e:
