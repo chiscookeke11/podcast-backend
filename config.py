@@ -9,8 +9,14 @@ class Settings(BaseSettings):
     anthropic_api_key: str
     anthropic_model: str = "claude-3-5-haiku-20241022"
 
+    # OpenAI
+    openai_api_key: str | None = None
+
+    # TTS
+    tts_provider: str = "openai"
+
     # ElevenLabs
-    elevenlabs_api_key: str
+    elevenlabs_api_key: str | None = None
     elevenlabs_model: str = "eleven_turbo_v2_5"
 
     # App

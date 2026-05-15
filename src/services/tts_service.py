@@ -1,7 +1,7 @@
 """
 tts_service.py
-ElevenLabs synthesis with per-tone voice setting overrides and expression tag support.
-Combines everything from the earlier tts.py and expressions.py into one clean service.
+TTS synthesis supporting both ElevenLabs and OpenAI.
+Automatically falls back to OpenAI if ElevenLabs fails.
 """
 
 from __future__ import annotations
@@ -104,6 +104,44 @@ async def _call_elevenlabs(
         return response.content
 
 
+# ── OpenAI TTS API call ───────────────────────────────────────────────────────
+
+OPENAI_VOICE_MAP = {
+    "Nova": "nova",  # Friendly, warm
+    "Titan": "onyx",  # Deep, authoritative
+}
+
+
+async def _call_openai_tts(
+    text: str,
+    speaker_name: str,
+    speaking_rate: float,
+    api_key: str,
+) -> bytes:
+    """OpenAI TTS /audio/speech call. Returns raw MP3 bytes."""
+    url = "https://api.openai.com/v1/audio/speech"
+
+    # Map speaker name to OpenAI voice
+    voice = OPENAI_VOICE_MAP.get(speaker_name, "alloy")
+
+    payload = {
+        "model": "tts-1",  # tts-1 is faster, tts-1-hd for higher quality
+        "input": text,
+        "voice": voice,
+        "speed": speaking_rate,
+    }
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(url, json=payload, headers=headers)
+        response.raise_for_status()
+        return response.content
+
+
 # ── Synthesise one line ───────────────────────────────────────────────────────
 
 
@@ -111,54 +149,89 @@ async def synthesise_line(
     line: TranscriptLine,
     host: HostConfig,
     output_dir: Path,
-    api_key: str,
 ) -> SynthesisResult:
     """
     Synthesise one transcript line to MP3.
+    Tries ElevenLabs first, falls back to OpenAI if it fails.
     Writes to {output_dir}/{line_index:03d}_{speaker}.mp3
     Returns a SynthesisResult (success or failure).
     """
     filename = f"{line.line_index:03d}_{line.speaker.lower()}.mp3"
     output_path = output_dir / filename
 
+    # Try ElevenLabs first if configured
+    if settings.tts_provider == "elevenlabs" and settings.elevenlabs_api_key:
+        try:
+            voice_settings = _merge_tone(host, line.tone)
+            audio_bytes = await _call_elevenlabs(
+                text=line.text,
+                voice_id=host.voice.voice_id,
+                voice_settings=voice_settings,
+                model_id=host.voice.model_id,
+                api_key=settings.elevenlabs_api_key,
+            )
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(audio_bytes)
+
+            log.debug(
+                "line_synthesised",
+                provider="elevenlabs",
+                line_index=line.line_index,
+                speaker=line.speaker,
+                tone=line.tone,
+                bytes=len(audio_bytes),
+            )
+
+            return SynthesisResult(
+                line_index=line.line_index,
+                speaker=line.speaker,
+                audio_path=str(output_path),
+            )
+
+        except httpx.HTTPStatusError as e:
+            log.warning(
+                "elevenlabs_failed_trying_openai",
+                status=e.response.status_code,
+                error=e.response.text[:200],
+            )
+
+    # OpenAI TTS (fallback or primary)
     try:
-        voice_settings = _merge_tone(host, line.tone)
-        audio_bytes = await _call_elevenlabs(
+        if not settings.openai_api_key:
+            return SynthesisResult(
+                line_index=line.line_index,
+                speaker=line.speaker,
+                audio_path="",
+                error="No TTS provider configured. Set ELEVENLABS_API_KEY or OPENAI_API_KEY",
+            )
+
+        preset = TONE_PRESETS.get(line.tone, TONE_PRESETS[Tone.DEFAULT])
+        audio_bytes = await _call_openai_tts(
             text=line.text,
-            voice_id=host.voice.voice_id,
-            voice_settings=voice_settings,
-            model_id=host.voice.model_id,
-            api_key=api_key,
+            speaker_name=line.speaker,
+            speaking_rate=preset.speaking_rate,
+            api_key=settings.openai_api_key,
         )
+
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(audio_bytes)
 
         log.debug(
             "line_synthesised",
+            provider="openai",
             line_index=line.line_index,
             speaker=line.speaker,
-            tone=line.tone,
             bytes=len(audio_bytes),
         )
 
         return SynthesisResult(
             line_index=line.line_index,
             speaker=line.speaker,
-            audio_path=str(output_path),
+            audio_path=filename,  # Store only filename, not full path
         )
 
-    except httpx.HTTPStatusError as e:
-        log.error(
-            "elevenlabs_error", status=e.response.status_code, text=e.response.text
-        )
-        return SynthesisResult(
-            line_index=line.line_index,
-            speaker=line.speaker,
-            audio_path="",
-            error=f"ElevenLabs {e.response.status_code}: {e.response.text[:200]}",
-        )
     except Exception as e:
-        log.error("synthesis_error", error=str(e))
+        log.error("tts_synthesis_error", error=str(e))
         return SynthesisResult(
             line_index=line.line_index,
             speaker=line.speaker,
@@ -188,9 +261,7 @@ async def synthesise_transcript(
     async def _bounded(line: TranscriptLine) -> SynthesisResult:
         host = hosts[line.speaker]
         async with semaphore:
-            result = await synthesise_line(
-                line, host, output_dir, settings.elevenlabs_api_key
-            )
+            result = await synthesise_line(line, host, output_dir)
             job.completed += 1
             job.results.append(result)
             log.info(

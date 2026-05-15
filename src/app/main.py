@@ -35,7 +35,7 @@ app.include_router(episodes_router)
 
 @app.get("/")
 async def frontend():
-    return FileResponse("src/app/static/index.html")
+    return {"message": "Backend is up and running!"}
 
 
 @app.get("/health")
