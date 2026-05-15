@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 
@@ -25,6 +26,15 @@ class Settings(BaseSettings):
     max_episode_turns: int = 12
     tts_concurrency: int = 3
     cors_origins: list[str] = ["http://localhost:5173"]
+
+
+    @field_validator("tts_provider", mode="before")
+    @classmethod
+    def normalise_tts_provider(cls, v: str) -> str:
+        provider = (v or "openai").strip().lower()
+        if provider not in {"openai", "elevenlabs"}:
+            return "openai"
+        return provider
 
     @property
     def is_dev(self) -> bool:
